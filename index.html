@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>增长罗盘 · Northstar — AI 用户增长 Copilot</title>
+<meta name="description" content="输入项目资源、背景、指标，自动生成企业级用增方案；上线后接入数据，实时追踪、复盘、预警。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- 封面 Landing -->
+<section class="landing" id="view-landing">
+  <div class="landing-glow" aria-hidden="true"></div>
+  <div class="landing-stars" id="landing-stars" aria-hidden="true"></div>
+  <div class="landing-inner">
+    <div class="landing-top">
+      <div class="landing-brand">
+        <span class="landing-mark" aria-hidden="true">✦</span>
+        <span class="landing-brand-text">增长罗盘 <span class="landing-brand-en">· Northstar</span></span>
+      </div>
+    </div>
+    <div class="landing-hero">
+      <p class="landing-eyebrow">AI 用户增长 Copilot</p>
+      <h1 class="landing-title">让每一次增长<br>都有章可循</h1>
+      <p class="landing-sub">输入项目资源、背景与指标，AI 生成企业级用增方案；上线后接入数据，实时追踪、复盘、预警，覆盖增长全生命周期。</p>
+      <button class="btn btn-primary btn-lg" id="btn-enter">开始使用 <span aria-hidden="true">→</span></button>
+    </div>
+    <div class="landing-features">
+      <div class="feature-card">
+        <span class="feature-num">01</span>
+        <h3 class="feature-title">智能策划</h3>
+        <p class="feature-desc">三要素输入，AI 生成可落地的增长方案</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-num">02</span>
+        <h3 class="feature-title">实时追踪</h3>
+        <p class="feature-desc">数据接入，动态看板实时监测核心指标</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-num">03</span>
+        <h3 class="feature-title">复盘预警</h3>
+        <p class="feature-desc">异常自动预警，AI 复盘给出行动建议</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-num">04</span>
+        <h3 class="feature-title">协同调优</h3>
+        <p class="feature-desc">意见反馈驱动迭代，版本可随时回退</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 顶栏 -->
+<header class="topbar hidden">
+  <div class="topbar-inner">
+    <a class="brand" href="#" id="brand-home">
+      <span class="brand-mark" aria-hidden="true">✦</span>
+      <span class="brand-name">增长罗盘<span class="brand-en"> · Northstar</span></span>
+    </a>
+    <nav class="topbar-nav" aria-label="主导航">
+      <a href="#" class="nav-link is-active" data-nav="projects">项目</a>
+      <a href="#" class="nav-link" data-nav="new">新建</a>
+    </nav>
+    <div class="topbar-actions">
+      <button class="theme-toggle" id="theme-toggle" aria-label="切换主题">
+        <span class="icon-sun" aria-hidden="true">☀</span>
+        <span class="icon-moon" aria-hidden="true">☾</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="main hidden">
+
+  <!-- 视图 1：项目列表 -->
+  <section class="view" id="view-projects">
+    <div class="view-head">
+      <div>
+        <p class="eyebrow">工作台</p>
+        <h1 class="view-title">增长项目</h1>
+        <p class="view-sub">从「策划 → 上线 → 复盘」管理每一次用户增长活动</p>
+      </div>
+      <button class="btn btn-primary" id="btn-new-project">
+        <span aria-hidden="true">＋</span> 新建项目
+      </button>
+    </div>
+
+    <!-- KPI 总览 -->
+    <div class="kpi-grid" id="kpi-grid"><!-- JS 渲染 --></div>
+
+    <!-- 模板库 -->
+    <div class="template-section">
+      <div class="template-head">
+        <h2 class="template-title">增长场景模板</h2>
+        <span class="template-sub">选一个场景，一键创建带默认配置的项目</span>
+      </div>
+      <div class="template-grid" id="template-grid"><!-- JS 渲染 --></div>
+    </div>
+
+    <h2 class="section-mini-title" id="projects-title">我的项目</h2>
+    <div class="project-grid" id="project-grid"><!-- JS 渲染 --></div>
+    <div class="empty-state hidden" id="empty-state">
+      <span class="empty-mark" aria-hidden="true">✦</span>
+      <p class="empty-title">还没有项目</p>
+      <p class="empty-sub">新建一个增长项目，输入资源、背景与指标，AI 帮你生成用增方案。</p>
+      <button class="btn btn-primary" id="btn-new-project-2">＋ 新建项目</button>
+    </div>
+  </section>
+
+  <!-- 视图 2：新建项目 -->
+  <section class="view hidden" id="view-new">
+    <div class="view-head">
+      <div>
+        <button class="btn-back" id="btn-back-new" type="button">← 返回</button>
+        <p class="eyebrow">新建</p>
+        <h1 class="view-title">新建增长项目</h1>
+        <p class="view-sub">填写三要素——业务背景、可用资源、追踪指标，AI 将据此生成方案</p>
+      </div>
+    </div>
+
+    <form class="form" id="project-form" novalidate>
+      <!-- 一、项目背景 -->
+      <section class="form-section">
+        <h2 class="form-section-title"><span class="sec-num">01</span> 项目背景</h2>
+        <div class="field">
+          <label for="project-name">项目名称 <span class="req">*</span></label>
+          <input type="text" id="project-name" placeholder="例如：618 防晒季拉新" required>
+        </div>
+        <div class="field">
+          <label for="project-bg">业务背景 <span class="req">*</span></label>
+          <textarea id="project-bg" rows="3" placeholder="用一段话描述你的产品与增长诉求：产品是什么、目标用户、当前阶段、想解决的增长问题。AI 会完全基于这段描述来设计玩法与策略，不套用任何预设打法。" required></textarea>
+          <p class="field-hint">业务无关：玩法由你的业务背景动态生成，电商与互联网产品（App / 内容 / AI 平台）均适用。</p>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="project-platform">平台 / 载体</label>
+            <select id="project-platform">
+              <option value="">通用 / 不限</option>
+              <option>自有 App</option>
+              <option>小程序</option>
+              <option>官网 / Web</option>
+              <option>电商平台</option>
+              <option>内容平台</option>
+              <option value="__other__">其他（自定义）</option>
+            </select>
+            <input type="text" id="platform-other" class="hidden other-input" placeholder="请输入平台名称">
+          </div>
+          <div class="field">
+            <label for="project-goal">增长目标 <span class="req">*</span></label>
+            <select id="project-goal" required>
+              <option value="" disabled selected>选择目标</option>
+              <option value="拉新">拉新（获取新用户）</option>
+              <option value="激活">激活（关键行为转化）</option>
+              <option value="留存">留存（复访 / 活跃）</option>
+              <option value="转化">转化（付费 / 核心转化）</option>
+              <option value="传播">传播（老带新裂变）</option>
+              <option value="__other__">其他（自定义）</option>
+            </select>
+            <input type="text" id="goal-other" class="hidden other-input" placeholder="请输入增长目标">
+          </div>
+        </div>
+        <div class="field">
+          <label>目标人群（多选标签，或自填）</label>
+          <div class="chips" data-chips="audience">
+            <button type="button" class="chip" data-value="学生群体">学生群体</button>
+            <button type="button" class="chip" data-value="白领/职场">白领/职场</button>
+            <button type="button" class="chip" data-value="Z世代">Z世代</button>
+            <button type="button" class="chip" data-value="年轻家庭">年轻家庭</button>
+            <button type="button" class="chip" data-value="新用户">新用户</button>
+            <button type="button" class="chip" data-value="沉默用户">沉默用户</button>
+            <button type="button" class="chip" data-value="高活跃用户">高活跃用户</button>
+            <button type="button" class="chip" data-value="一二线城市">一二线城市</button>
+            <button type="button" class="chip" data-value="下沉市场">下沉市场</button>
+            <button type="button" class="chip" data-value="价格敏感型">价格敏感型</button>
+            <button type="button" class="chip" data-value="品质导向型">品质导向型</button>
+          </div>
+          <div class="chip-add-row">
+            <input type="text" id="audience-input" placeholder="自定义人群标签，如：AI 爱好者">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-add-audience">＋ 添加</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 二、项目资源 -->
+      <section class="form-section">
+        <h2 class="form-section-title"><span class="sec-num">02</span> 项目资源</h2>
+        <div class="field">
+          <label for="project-budget">预算（元）</label>
+          <input type="number" id="project-budget" placeholder="例如：50000" min="0">
+        </div>
+        <div class="field">
+          <label>历史基线（可选，用于精准预估）</label>
+          <div class="field-row">
+            <div class="field">
+              <label for="baseline-users">现有用户规模</label>
+              <input type="number" id="baseline-users" placeholder="如 100000" min="0">
+            </div>
+            <div class="field">
+              <label for="baseline-cpm">历史曝光单价（元/千次）</label>
+              <input type="number" id="baseline-cpm" placeholder="如 20" min="0">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="baseline-ctr">历史点击率（%）</label>
+              <input type="number" id="baseline-ctr" placeholder="如 3.0" min="0" step="0.1">
+            </div>
+            <div class="field">
+              <label for="baseline-cvr">历史转化率（%）</label>
+              <input type="number" id="baseline-cvr" placeholder="如 6.0" min="0" step="0.1">
+            </div>
+          </div>
+          <p class="field-hint">不填则使用行业默认值；填写后预估基于你的历史数据计算，量级随规模调整。</p>
+        </div>
+        <div class="field">
+          <label>触达渠道</label>
+          <div class="chips" data-chips="channels">
+            <button type="button" class="chip" data-value="站内推送">站内推送</button>
+            <button type="button" class="chip" data-value="短信">短信</button>
+            <button type="button" class="chip" data-value="邮件">邮件</button>
+            <button type="button" class="chip" data-value="广告投放">广告投放</button>
+            <button type="button" class="chip" data-value="社交媒体">社交媒体</button>
+            <button type="button" class="chip" data-value="内容种草">内容种草</button>
+            <button type="button" class="chip" data-value="线下活动">线下活动</button>
+          </div>
+          <div class="chip-add-row">
+            <input type="text" data-add-input="channels" placeholder="自定义渠道">
+            <button type="button" class="btn btn-ghost btn-sm" data-add-chip="channels">＋ 添加</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>权益 / 激励工具</label>
+          <div class="chips" data-chips="tools">
+            <button type="button" class="chip" data-value="优惠券">优惠券</button>
+            <button type="button" class="chip" data-value="折扣">折扣</button>
+            <button type="button" class="chip" data-value="积分">积分</button>
+            <button type="button" class="chip" data-value="会员权益">会员权益</button>
+            <button type="button" class="chip" data-value="赠品礼包">赠品礼包</button>
+            <button type="button" class="chip" data-value="免费体验">免费体验</button>
+          </div>
+          <div class="chip-add-row">
+            <input type="text" data-add-input="tools" placeholder="自定义权益">
+            <button type="button" class="btn btn-ghost btn-sm" data-add-chip="tools">＋ 添加</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="project-sku">货盘 / 产品（可选）</label>
+          <textarea id="project-sku" rows="2" placeholder="可选。可参与增长的商品或产品/SKU；未填写则以玩法与策略为核心，货品仅作参考。"></textarea>
+          <p class="field-hint">非必选：未填写时，方案重心放在玩法、策略与人群触达上。</p>
+        </div>
+      </section>
+
+      <!-- 三、项目指标 -->
+      <section class="form-section">
+        <h2 class="form-section-title"><span class="sec-num">03</span> 项目指标</h2>
+        <p class="field-hint">选择「增长目标」后会自动带出默认指标集，可增删或自定义。这些指标将决定上线后看板追踪什么。</p>
+        <div class="field">
+          <label>追踪指标</label>
+          <div class="chips chips-metrics" id="metrics-container"><!-- 由目标预设填充 --></div>
+        </div>
+        <div class="field metric-add-row">
+          <input type="text" id="metric-input" placeholder="自定义指标，如：次日留存率">
+          <button type="button" class="btn btn-ghost" id="btn-add-metric">＋ 添加</button>
+        </div>
+      </section>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" id="btn-cancel">取消</button>
+        <button type="submit" class="btn btn-primary" id="btn-create">生成用增方案 →</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- 视图 3：项目详情 -->
+  <section class="view hidden" id="view-detail">
+    <div class="view-head">
+      <div>
+        <button class="btn-back" id="btn-back-detail" type="button">← 返回</button>
+        <p class="eyebrow" id="detail-eyebrow">项目</p>
+        <h1 class="view-title" id="detail-title">项目名称</h1>
+      </div>
+      <div class="detail-actions">
+        <button class="btn btn-ghost" id="btn-edit-project" type="button">编辑配置</button>
+        <span class="status-badge" id="detail-status">草稿</span>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab is-active" role="tab" data-tab="plan">① 活动策划</button>
+      <button class="tab" role="tab" data-tab="review">② 活动复盘</button>
+    </div>
+
+    <div class="tab-panel is-active" data-panel="plan">
+      <div class="plan-toolbar">
+        <div class="plan-summary" id="plan-summary"></div>
+        <div class="plan-toolbar-actions">
+          <div class="export-wrap">
+            <button class="btn btn-ghost hidden" id="btn-export" type="button">导出文档 <span aria-hidden="true">▾</span></button>
+            <div class="export-menu hidden" id="export-menu">
+              <button class="export-option" id="btn-export-md" type="button">Markdown（.md）</button>
+              <button class="export-option" id="btn-export-pdf" type="button">PDF（打印）</button>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="btn-generate-plan"><span aria-hidden="true">✦</span> 生成用增方案</button>
+        </div>
+      </div>
+      <div class="placeholder" id="plan-empty">
+        <span class="empty-mark" aria-hidden="true">✦</span>
+        <p class="empty-title">尚未生成方案</p>
+        <p class="empty-sub">点击「生成用增方案」，AI 将基于项目的业务背景、资源与指标，生成结构化的用增方案。</p>
+      </div>
+      <div id="plan-output"></div>
+      <div class="tune-panel hidden" id="tune-panel">
+        <div class="tune-head">
+          <span class="tune-version" id="tune-version">v1</span>
+          <button class="btn btn-ghost btn-sm hidden" id="btn-tune-prev" type="button">← 返回上一版本</button>
+        </div>
+        <textarea id="tune-input" rows="2" placeholder="对方案提出修改意见，AI 将据此迭代新版。如：预算压缩到 5 万、人群聚焦大学生、加大裂变力度"></textarea>
+        <div class="tune-actions">
+          <button class="btn btn-primary" id="btn-tune-submit" type="button"><span aria-hidden="true">↺</span> AI 调优方案</button>
+        </div>
+      </div>
+    </div>
+    <div class="tab-panel" data-panel="review">
+      <div class="review-toolbar">
+        <div class="review-status">
+          <span class="status-dot" id="review-status-dot"></span>
+          <span id="review-status-text">数据未接入</span>
+        </div>
+        <div class="review-actions">
+          <button class="btn btn-ghost btn-sm" id="btn-import-csv" type="button" title="即将上线">导入数据</button>
+          <button class="btn btn-primary" id="btn-start-stream" type="button"><span aria-hidden="true">▶</span> 启动实时追踪</button>
+        </div>
+      </div>
+      <div class="placeholder" id="review-empty">
+        <span class="empty-mark" aria-hidden="true">✦</span>
+        <p class="empty-title">尚未生成方案</p>
+        <p class="empty-sub">先在「活动策划」中生成方案，再回到这里启动实时数据追踪。</p>
+      </div>
+      <div id="review-output" class="hidden">
+        <div id="review-dashboard"></div>
+        <section class="plan-block">
+          <h3 class="plan-block-title"><span class="plan-num">⚠</span> 异常预警</h3>
+          <div class="plan-block-body" id="review-alerts"></div>
+        </section>
+        <section class="plan-block">
+          <h3 class="plan-block-title"><span class="plan-num">↺</span> AI 复盘报告</h3>
+          <div class="plan-block-body" id="review-report"></div>
+        </section>
+        <section class="plan-block">
+          <h3 class="plan-block-title"><span class="plan-num">🧪</span> 增长实验（A/B 测试）</h3>
+          <div class="plan-block-body">
+            <div class="ab-setup">
+              <select id="ab-hypothesis">
+                <option value="" disabled selected>选择要验证的策略假设</option>
+                <option value="benefit">加大权益力度 → 提升转化率</option>
+                <option value="audience">优化人群定向 → 降低获客成本</option>
+                <option value="referral">增加裂变激励 → 提升 K 因子</option>
+                <option value="channel">调整渠道配比 → 提升 ROI</option>
+              </select>
+              <button class="btn btn-primary btn-sm" id="btn-ab-run" type="button">发起实验</button>
+            </div>
+            <div id="ab-result"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<input type="file" id="csv-input" accept=".csv" class="hidden">
+
+<script src="plan.js"></script>
+<script src="review.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

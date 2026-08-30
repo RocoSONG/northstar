@@ -1,0 +1,9 @@
+{
+  "name": "northstar",
+  "version": "1.0.0",
+  "description": "增长罗盘 Northstar — AI 用户增长 Copilot",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}
