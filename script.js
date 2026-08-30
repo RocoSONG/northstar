@@ -515,12 +515,43 @@
     renderCurrentPlan(p);
     $('#plan-output').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-    // 异步 LLM 增强：定制化玩法 + 诊断（失败/未配置则自动降级为 mock 玩法池）
+    // 异步 LLM 增强：定制化玩法 + 诊断 + 执行计划 + 预算分配（失败/未配置则自动降级为 mock 玩法池）
     if (API_BASE) {
       const llm = await NorthstarPlan.generateWithLLM(p, API_BASE);
       if (llm) {
         plan.diagnosis = { ...plan.diagnosis, ...llm.diagnosis };
         plan.playbook = { plays: llm.plays, note: '以上玩法由 AI 基于业务背景定制化生成。' };
+
+        // 执行计划：LLM 定制化产出（联动玩法），阶段目标人数由前端基于 forecast 按占比补齐
+        if (llm.executionPlan && Array.isArray(llm.executionPlan.phases) && llm.executionPlan.phases.length) {
+          const rawPhases = llm.executionPlan.phases.map((ph) => {
+            const r = Number(ph.goalShare);
+            return { phase: ph.phase, duration: ph.duration, gs: (r >= 0 && r <= 1) ? r : (r / 100), actions: Array.isArray(ph.actions) ? ph.actions : [] };
+          });
+          const gsSum = rawPhases.reduce((s, x) => s + (Number(x.gs) || 0), 0) || 1;
+          plan.executionPlan = {
+            channels: plan.executionPlan.channels,
+            phases: rawPhases.map((x) => {
+              const goalShare = (Number(x.gs) || 0) / gsSum;
+              return { phase: x.phase || '阶段', duration: x.duration || '—', goalShare, goal: Math.round(plan.forecast.coreCount * goalShare), actions: x.actions };
+            })
+          };
+        }
+
+        // 预算分配：LLM 定制化产出（联动玩法），金额由前端基于预算按占比补齐并归一化
+        if (llm.budgetAllocation && Array.isArray(llm.budgetAllocation.items) && llm.budgetAllocation.items.length) {
+          const total = Number(p.budget) || 50000;
+          const rawItems = llm.budgetAllocation.items.map((it) => ({ channel: it.channel || '渠道', pct: Number(it.pct) || 0, reason: it.reason || '—' }));
+          const pctSum = rawItems.reduce((s, i) => s + i.pct, 0) || 100;
+          plan.budgetAllocation = {
+            total,
+            items: rawItems.map((i) => {
+              const pct = Math.round(i.pct / pctSum * 100);
+              return { channel: i.channel, pct, amount: Math.round(total * pct / 100), reason: i.reason };
+            })
+          };
+        }
+
         p.planHistory = [plan];
         saveProjects();
         renderCurrentPlan(p);

@@ -768,7 +768,7 @@
                 </div>
                 <p class="budget-reason">${esc(i.reason)}</p>`).join('')}
             </div>
-            <p class="plan-hint">总预算 ${fmt(plan.budgetAllocation.total)} 元 · 权重按渠道属性（覆盖广度 / 信任成本 / 触达上限）综合评估</p>
+            <p class="plan-hint">总预算 ${fmt(plan.budgetAllocation.total)} 元 · 分配理由见各渠道说明</p>
           </div>
         </section>
 
