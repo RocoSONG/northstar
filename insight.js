@@ -10,8 +10,10 @@
   /* ============================================================
      色板与主题（Tableau 风格，契合品牌冰蓝→紫）
      ============================================================ */
-  // 同色系色板：品牌冰蓝 → 紫的深浅渐变序列（多系列/多分类时依次取用）
-  const PALETTE = ['#5b7cff', '#6d8dff', '#8298ff', '#97a3ff', '#abaeff', '#bda0fa', '#a78bfa', '#8f6ff5', '#7b5fe8', '#6b4fd8'];
+  // 多系列（趋势图）用：蓝 / 紫 / 紫蓝，色相跨度大、区分度高
+  const PALETTE = ['#5b7cff', '#a78bfa', '#8f6ff5', '#b57bff'];
+  // 环形构成用：蓝紫系深浅交错排列，相邻扇区一眼可区分
+  const DOUGHNUT_COLORS = ['#5b7cff', '#b57bff', '#8f6ff5', '#6d8dff', '#c49efb', '#7b5fe8', '#a78bfa', '#4a6fe0'];
 
   function chartTheme() {
     const dark = document.documentElement.getAttribute('data-theme') !== 'light';
@@ -333,13 +335,12 @@
       </div>
       <div class="ov-grid">${metricCards || '<p class="plan-hint">未识别到数值指标列。</p>'}</div>`;
 
-    // ---- 可视化模块（自动选图 + 自动挑数据） ----
+    // ---- 可视化模块（自动选图 + 自动挑数据，随数据结构自适应） ----
     let vizHtml = '';
-    // 1) 时间趋势（折线）
+    // 1) 时间趋势（折线）：有时间列时，挑变化最显著的 2 个指标
     if (s.timeCol >= 0 && s.metrics.length) {
       const timeKeys = data.rows.map((r) => r[s.timeCol]);
       const uniqTimes = Array.from(new Set(timeKeys));
-      // 挑变化最显著的前 2 个指标
       const trendMetrics = s.metrics.slice().sort((a, b) => (b.max - b.min) - (a.max - a.min)).slice(0, 2);
       const trendDatasets = trendMetrics.map((m, i) => {
         const byTime = new Map();
@@ -347,18 +348,23 @@
         return { label: m.name, color: PALETTE[i], data: uniqTimes.map((t) => byTime.get(t) || 0) };
       });
       charts.push({ id: 'trend', type: 'line', config: buildLineConfig(uniqTimes, trendDatasets, '核心指标时间趋势') });
-      vizHtml += chartCard('trend', '时间趋势', '指标随时间的变化，折线按时间聚合展示');
+      vizHtml += chartCard('trend', '时间趋势', `「${trendMetrics.map((m) => m.name).join(' / ')}」随时间的变化，按时间聚合`);
     }
-    // 2) 维度对比（柱状）
+    // 2) 维度对比（柱状）：按贡献最大的维度，展示各分组的总量
     if (attr) {
       const top = attr.items.slice(0, 8);
-      charts.push({ id: 'dim-bar', type: 'bar', config: buildBarConfig(top.map((i) => i.key), [{ label: attr.metricName, data: top.map((i) => i.avg), color: PALETTE[0] }], `${attr.dimName} × 均值`, true) });
-      vizHtml += chartCard('dim-bar', `${attr.dimName}对比`, `各${attr.dimName}的「${attr.metricName}」均值对比（Top ${top.length}）`);
+      charts.push({ id: 'dim-bar', type: 'bar', config: buildBarConfig(top.map((i) => i.key), [{ label: attr.metricName, data: top.map((i) => i.sum), color: PALETTE[0] }], `${attr.dimName} × ${attr.metricName}`, true) });
+      vizHtml += chartCard('dim-bar', `${attr.dimName}对比`, `各${attr.dimName}对「${attr.metricName}」的总量贡献（Top ${top.length}）`);
     }
-    // 3) 构成（环形）
+    // 3) 构成（环形）：维度唯一值适中时展示占比
     if (attr && attr.items.length >= 2) {
       charts.push({ id: 'dim-doughnut', type: 'doughnut', config: buildDoughnutConfig(attr.items.map((i) => i.key), attr.items.map((i) => i.sum), attr.metricName + ' 构成') });
       vizHtml += chartCard('dim-doughnut', '结构构成', `各${attr.dimName}对「${attr.metricName}」的贡献占比`);
+    }
+    // 4) 指标总量对比（兜底）：无维度列但有多个指标时，展示各指标量级
+    if (!attr && s.metrics.length >= 2) {
+      charts.push({ id: 'metric-bar', type: 'bar', config: buildBarConfig(s.metrics.map((m) => m.name), [{ label: '总量', data: s.metrics.map((m) => m.sum), color: PALETTE[0] }], '指标总量对比', false) });
+      vizHtml += chartCard('metric-bar', '指标总量对比', '各核心指标的总量量级对比');
     }
 
     // ---- 归因模块 ----
@@ -483,7 +489,8 @@
           displayColors: true, boxPadding: 5, titleMarginBottom: 6,
           titleFont: { family: th.font, size: 12, weight: '600' },
           bodyFont: { family: th.font, size: 12.5 }
-        }
+        },
+        datalabels: { display: false }
       }
     };
   }
@@ -527,7 +534,23 @@
       options: {
         ...baseOptions(),
         indexAxis: horizontal ? 'y' : 'x',
-        scales: {
+        plugins: {
+          ...baseOptions().plugins,
+          legend: { display: false },
+          datalabels: {
+            display: true,
+            anchor: 'end',
+            align: 'end',
+            offset: 3,
+            color: th.muted,
+            font: { family: th.font, size: 11, weight: '600' },
+            formatter: (v) => fmtCompact(v)
+          }
+        },
+        scales: horizontal ? {
+          x: { grid: { color: th.grid }, ticks: { color: th.muted, font: { family: th.font, size: 10 }, callback: (v) => fmtCompact(v) } },
+          y: { grid: { display: false }, ticks: { color: th.text, font: { family: th.font, size: 11, weight: '600' } } }
+        } : {
           x: { grid: { color: th.grid }, ticks: { color: th.muted, font: { family: th.font, size: 10 } } },
           y: { grid: { color: th.grid }, ticks: { color: th.muted, font: { family: th.font, size: 10 }, callback: (v) => fmtCompact(v) } }
         }
@@ -538,13 +561,24 @@
   function buildDoughnutConfig(labels, data, title) {
     return {
       type: 'doughnut',
-      data: { labels, datasets: [{ data, backgroundColor: PALETTE.slice(0, data.length), borderColor: 'transparent', borderWidth: 1, hoverOffset: 6, shadowColor: 'rgba(109,141,255,0.25)', shadowBlur: 18 }] },
+      data: { labels, datasets: [{ data, backgroundColor: DOUGHNUT_COLORS.slice(0, data.length), borderColor: 'transparent', borderWidth: 1, hoverOffset: 6, shadowColor: 'rgba(109,141,255,0.25)', shadowBlur: 18 }] },
       options: {
         ...baseOptions(),
-        cutout: '62%',
+        cutout: '58%',
         plugins: {
           ...baseOptions().plugins,
-          legend: { position: 'right', labels: { color: chartTheme().muted, font: { family: chartTheme().font, size: 11 }, boxWidth: 12, boxHeight: 12, usePointStyle: true, padding: 10 } }
+          legend: {
+            position: 'right',
+            align: 'center',
+            labels: {
+              color: chartTheme().muted,
+              font: { family: chartTheme().font, size: 12, weight: '500' },
+              boxWidth: 14, boxHeight: 14,
+              usePointStyle: false,
+              pointStyle: 'rectRounded',
+              padding: 13
+            }
+          }
         }
       }
     };
