@@ -556,11 +556,7 @@
         if (llm.benefitRules && Array.isArray(llm.benefitRules) && llm.benefitRules.length) {
           plan.benefitRules = llm.benefitRules.map((r) => ({ label: r.label || '权益', rule: r.rule || '', limit: !!r.limit }));
         }
-        // 权益校验：LLM 定制化产出（防资损/羊毛）
-        if (llm.benefitValidation && Array.isArray(llm.benefitValidation) && llm.benefitValidation.length) {
-          plan.benefitValidation = llm.benefitValidation.map((v) => ({ level: v.level || 'low', msg: v.msg || '' }));
-        }
-        // 风险提示：LLM 定制化产出（项目整体风险）
+        // 风险提示：LLM 定制化产出（项目整体风险，含资损/羊毛）
         if (llm.risks && Array.isArray(llm.risks) && llm.risks.length) {
           plan.risks = llm.risks.map((r) => ({ level: r.level || 'low', content: r.content || '' }));
         }

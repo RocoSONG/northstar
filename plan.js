@@ -433,9 +433,13 @@
     return { total: budget, items };
   }
 
-  function buildRisks(project, validation, forecast) {
+  function buildRisks(project, forecast) {
     const risks = [];
-    validation.forEach((v) => risks.push({ level: v.level, content: v.msg }));
+    // 权益资损 / 羊毛风险（并入风险提示，不再单独成板块）
+    const benefitRules = buildBenefitRules(project);
+    const ctx = { budget: Number(project.budget) || 50000, estCore: forecast.coreCount, unitCost: 15 };
+    validateBenefits(benefitRules, ctx).forEach((v) => risks.push({ level: v.level, content: v.msg }));
+    // 项目整体风险
     if (!project.budget) {
       risks.push({ level: 'medium', content: '未填写预算，预估按默认 5 万测算，建议补充后重算。' });
     }
@@ -490,7 +494,6 @@
     const estCore = forecastResult.coreCount;
 
     const ctx = { budget: Number(project.budget) || 50000, estCore, unitCost: 15 };
-    const benefitValidation = validateBenefits(benefitRules, ctx);
 
     return {
       version: 1,
@@ -500,11 +503,10 @@
       audienceStrategy: buildAudienceStrategy(project),
       assets: buildAssets(project),
       benefitRules,
-      benefitValidation,
       executionPlan: buildExecutionPlan(project, forecastResult),
       budgetAllocation: buildBudgetAllocation(project),
       forecast: forecastResult,
-      risks: buildRisks(project, benefitValidation, forecastResult),
+      risks: buildRisks(project, forecastResult),
       metricSchema: buildMetricSchema(project.metrics, { forecast: forecastResult, budget: ctx.budget })
     };
   }
@@ -575,10 +577,10 @@
     L.push('');
 
     L.push('## 预估');
-    L.push(`- ${f.metricLabel}：**${fmt(f.coreCount)} 人**`);
-    L.push(`- 基线（自然增长）：${fmt(f.baselineCount)} 人`);
-    L.push(`- 策略增量：+${fmt(f.incremental)} 人（lift ${f.lift}x）`);
-    L.push(`- 公式：曝光 ${fmt(f.exposure)} × 点击率 ${pct(f.ctr)} × 转化率 ${pct(f.cvr)} × 策略提升 ${f.lift}x`);
+    L.push(`- 预估增长区间：**${fmt(f.range[0])} ~ ${fmt(f.range[1])} 人**（±20% 置信）`);
+    L.push(`- 基线（自然增长）：约 ${fmt(f.baselineCount)} 人`);
+    L.push(`- 策略增量：约 +${Math.round((f.lift - 1) * 100)}%（lift ${f.lift}x）`);
+    L.push(`- 算法模型：曝光 × 点击率 ${pct(f.ctr)} × 转化率 ${pct(f.cvr)} × 策略提升 ${f.lift}x`);
     L.push('');
 
     L.push('## 权益规则');
@@ -588,7 +590,7 @@
     L.push('## 执行计划');
     plan.executionPlan.phases.forEach((p) => {
       L.push(`### ${p.phase}（${p.duration}）`);
-      L.push(`- 阶段目标：${fmt(p.goal)} 人（${p.goalShare * 100}%）`);
+      L.push(`- 阶段目标：${fmt(p.goal)} 人（${(p.goalShare * 100).toFixed(2)}%）`);
       p.actions.forEach((a) => L.push(`- ${a}`));
       L.push('');
     });
@@ -632,18 +634,23 @@
         ${r.rule ? `<span class="coupon-rule">${esc(r.rule)}</span>` : ''}
       </div>`).join('');
 
-    const validationHtml = plan.benefitValidation.length
-      ? plan.benefitValidation.map((v) => `
-          <div class="risk-item risk-${v.level}"><span class="risk-dot"></span><span>${esc(v.msg)}</span></div>`).join('')
-      : '<div class="risk-item risk-low"><span class="risk-dot"></span><span>权益规则校验通过，无资损/羊毛风险。</span></div>';
-
     const audienceHtml = plan.audienceStrategy.map((s) => `<div class="risk-item risk-low"><span class="risk-dot"></span><span>${esc(s)}</span></div>`).join('');
 
-    const metricsHtml = plan.metricSchema.metrics.map((m) => `
+    const metricsHtml = plan.metricSchema.metrics.map((m) => {
+      let meta = '—';
+      if (m.target != null) {
+        if (String(m.target).includes('%')) {
+          meta = '目标 ' + m.target; // 比率类：直接显示目标百分比
+        } else if (m.baseline != null && m.baseline > 0) {
+          meta = '目标 +' + Math.round(((m.target / m.baseline) - 1) * 100) + '%'; // 数量类：显示相对基线的提升
+        }
+      }
+      return `
       <div class="metric-chip">
         <span class="metric-chip-label">${esc(m.label)}</span>
-        <span class="metric-chip-meta">${m.target ? fmt(m.target) : '—'}${m.unit}</span>
-      </div>`).join('');
+        <span class="metric-chip-meta">${meta}</span>
+      </div>`;
+    }).join('');
 
     const diagnosisHtml = plan.diagnosis ? `
       <section class="plan-block plan-block-diagnosis">
@@ -706,13 +713,13 @@
           <section class="plan-block">
             <h3 class="plan-block-title"><span class="plan-num">C</span> 预估 · ${esc(f.metricLabel)}</h3>
             <div class="plan-block-body">
-              <p class="plan-gmv">${fmt(f.coreCount)}<span class="plan-gmv-unit">人</span></p>
-              <p class="plan-gmv-formula">曝光 ${fmt(f.exposure)} × 点击率 ${pct(f.ctr)} × 转化率 ${pct(f.cvr)} × 策略提升 ${f.lift}x</p>
-              <p class="plan-est-range">预估区间：${fmt(f.range[0])} ~ ${fmt(f.range[1])} 人（±20%）</p>
+              <p class="plan-gmv">${fmt(f.range[0])} ~ ${fmt(f.range[1])}<span class="plan-gmv-unit">人</span></p>
+              <p class="plan-gmv-formula">算法模型：曝光 × 点击率 ${pct(f.ctr)} × 转化率 ${pct(f.cvr)} × 策略提升 ${f.lift}x</p>
+              <p class="plan-est-range">预估增长区间（±20% 置信），非精确值</p>
               <div class="lift-breakdown">
-                <div class="lift-item"><span>基线（不做策略的自然增长）</span><span>${fmt(f.baselineCount)} 人</span></div>
-                <div class="lift-item lift-inc"><span>策略增量（+${Math.round((f.lift - 1) * 100)}%）</span><span>+${fmt(f.incremental)} 人</span></div>
-                <div class="lift-item lift-total"><span>总预估</span><span>${fmt(f.coreCount)} 人</span></div>
+                <div class="lift-item"><span>基线（不做策略的自然增长）</span><span>约 ${fmt(f.baselineCount)} 人</span></div>
+                <div class="lift-item lift-inc"><span>策略增量</span><span>约 +${Math.round((f.lift - 1) * 100)}%</span></div>
+                <div class="lift-item lift-total"><span>预估区间</span><span>${fmt(f.range[0])} ~ ${fmt(f.range[1])} 人</span></div>
               </div>
               <div class="param-sources">
                 ${f.liftDetail.map((d) => `<span class="param-source">${esc(d)}</span>`).join('')}
@@ -750,7 +757,7 @@
                 <div class="exec-phase-head">
                   <span class="phase-name">${esc(p.phase)}</span>
                   <span class="phase-dur">${esc(p.duration)}</span>
-                  <span class="exec-goal">目标 ${fmt(p.goal)} 人 · ${p.goalShare * 100}%</span>
+                  <span class="exec-goal">目标 ${fmt(p.goal)} 人 · ${(p.goalShare * 100).toFixed(2)}%</span>
                 </div>
                 <div class="exec-actions">${p.actions.map((a) => `<span class="exec-action">${esc(a)}</span>`).join('')}</div>
               </div>`).join('')}
@@ -775,19 +782,14 @@
         </section>
 
         <section class="plan-block">
-          <h3 class="plan-block-title"><span class="plan-num">I</span> 权益校验（防资损 / 防羊毛）</h3>
-          <div class="plan-block-body">${validationHtml}</div>
-        </section>
-
-        <section class="plan-block">
-          <h3 class="plan-block-title"><span class="plan-num">J</span> 风险提示</h3>
+          <h3 class="plan-block-title"><span class="plan-num">I</span> 风险提示</h3>
           <div class="plan-block-body">
             ${plan.risks.map((r) => `<div class="risk-item risk-${r.level}"><span class="risk-dot"></span><span>${esc(r.content)}</span></div>`).join('')}
           </div>
         </section>
 
         <section class="plan-block">
-          <h3 class="plan-block-title"><span class="plan-num">K</span> 追踪指标（指标 Schema）</h3>
+          <h3 class="plan-block-title"><span class="plan-num">J</span> 追踪指标（指标 Schema）</h3>
           <div class="plan-block-body">
             <div class="metric-chip-list">${metricsHtml}</div>
             <p class="plan-hint">这些指标将决定上线后看板追踪什么、如何预警。</p>
