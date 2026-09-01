@@ -10,16 +10,37 @@
   /* ============================================================
      色板与主题（Tableau 风格，契合品牌冰蓝→紫）
      ============================================================ */
-  const PALETTE = ['#6d8dff', '#a78bfa', '#4ade80', '#fbbf24', '#f87171', '#38bdf8', '#f472b6', '#34d399', '#fb923c', '#94a3b8'];
+  // 同色系色板：品牌冰蓝 → 紫的深浅渐变序列（多系列/多分类时依次取用）
+  const PALETTE = ['#5b7cff', '#6d8dff', '#8298ff', '#97a3ff', '#abaeff', '#bda0fa', '#a78bfa', '#8f6ff5', '#7b5fe8', '#6b4fd8'];
 
   function chartTheme() {
     const dark = document.documentElement.getAttribute('data-theme') !== 'light';
     return {
-      text: dark ? 'rgba(232,236,244,0.85)' : 'rgba(25,30,43,0.85)',
+      dark,
+      text: dark ? 'rgba(232,236,244,0.92)' : 'rgba(25,30,43,0.9)',
       muted: dark ? 'rgba(139,147,167,0.9)' : 'rgba(90,98,115,0.9)',
       grid: dark ? 'rgba(139,147,167,0.12)' : 'rgba(90,98,115,0.14)',
-      font: "'Manrope','Noto Sans SC',sans-serif"
+      font: "'Manrope','Noto Sans SC',sans-serif",
+      tooltipBg: dark ? 'rgba(30,36,50,0.97)' : 'rgba(255,255,255,0.98)',
+      tooltipBorder: dark ? 'rgba(109,141,255,0.45)' : 'rgba(74,95,208,0.28)',
+      tooltipTitle: dark ? '#ffffff' : '#191e2b',
+      tooltipBody: dark ? '#dbe1ef' : '#3a4252'
     };
+  }
+
+  function hexToRgba(hex, a) {
+    const n = parseInt(String(hex).replace('#', ''), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+
+  // 垂直渐变（柱状/面积填充用，Tableau 式同色系过渡）
+  function vGradient(context, colors) {
+    const { chart } = context;
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return colors[0];
+    const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+    colors.forEach((c, i) => g.addColorStop(i / (colors.length - 1), c));
+    return g;
   }
 
   /* ============================================================
@@ -453,9 +474,15 @@
       plugins: {
         legend: { labels: { color: th.muted, font: { family: th.font, size: 11 }, boxWidth: 12, boxHeight: 12, usePointStyle: true, padding: 14 } },
         tooltip: {
-          backgroundColor: 'rgba(18,21,29,0.92)', borderColor: 'rgba(109,141,255,0.25)', borderWidth: 1,
-          titleColor: th.text, bodyColor: th.text, padding: 10, cornerRadius: 8,
-          titleFont: { family: th.font, size: 12 }, bodyFont: { family: th.font, size: 12 }
+          backgroundColor: th.tooltipBg,
+          borderColor: th.tooltipBorder,
+          borderWidth: 1,
+          titleColor: th.tooltipTitle,
+          bodyColor: th.tooltipBody,
+          padding: 12, cornerRadius: 10,
+          displayColors: true, boxPadding: 5, titleMarginBottom: 6,
+          titleFont: { family: th.font, size: 12, weight: '600' },
+          bodyFont: { family: th.font, size: 12.5 }
         }
       }
     };
@@ -466,8 +493,11 @@
     return {
       type: 'line',
       data: { labels, datasets: datasets.map((d) => ({
-        label: d.label, data: d.data, borderColor: d.color, backgroundColor: d.color + '22',
-        borderWidth: 2, pointRadius: 2.5, pointHoverRadius: 4, tension: 0.35, fill: true
+        label: d.label, data: d.data, borderColor: d.color,
+        backgroundColor: (ctx) => vGradient(ctx, [hexToRgba(d.color, 0.26), hexToRgba(d.color, 0.02)]),
+        borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 5,
+        pointBackgroundColor: d.color, pointBorderColor: '#fff', pointBorderWidth: 1.5,
+        tension: 0.35, fill: true
       })) },
       options: {
         ...baseOptions(),
@@ -485,8 +515,14 @@
     return {
       type: 'bar',
       data: { labels, datasets: datasets.map((d) => ({
-        label: d.label, data: d.data, backgroundColor: d.color + 'cc', hoverBackgroundColor: d.color,
-        borderRadius: 6, maxBarThickness: 36
+        label: d.label, data: d.data,
+        backgroundColor: (ctx) => vGradient(ctx, ['#6d8dff', '#a78bfa']),
+        hoverBackgroundColor: '#a78bfa',
+        borderRadius: horizontal ? { topRight: 6, bottomRight: 6 } : { topLeft: 6, topRight: 6 },
+        maxBarThickness: 36,
+        shadowColor: 'rgba(109,141,255,0.32)',
+        shadowOffsetY: horizontal ? 4 : 6,
+        shadowBlur: 14
       })) },
       options: {
         ...baseOptions(),
@@ -502,7 +538,7 @@
   function buildDoughnutConfig(labels, data, title) {
     return {
       type: 'doughnut',
-      data: { labels, datasets: [{ data, backgroundColor: PALETTE.slice(0, data.length), borderColor: 'transparent', borderWidth: 1, hoverOffset: 6 }] },
+      data: { labels, datasets: [{ data, backgroundColor: PALETTE.slice(0, data.length), borderColor: 'transparent', borderWidth: 1, hoverOffset: 6, shadowColor: 'rgba(109,141,255,0.25)', shadowBlur: 18 }] },
       options: {
         ...baseOptions(),
         cutout: '62%',
