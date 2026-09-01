@@ -490,17 +490,32 @@
     $('#btn-tune-prev').classList.toggle('hidden', p.planIndex === 0);
   }
 
+  function showPlanLoading() {
+    $('#plan-empty').classList.add('hidden');
+    $('#tune-panel').classList.add('hidden');
+    $('#plan-output').innerHTML = `
+      <div class="plan-loading">
+        <div class="loading-orb" aria-hidden="true">✦</div>
+        <p class="loading-title">AI 正在分析并生成方案…</p>
+        <p class="loading-sub">基于业务背景定制玩法、执行计划、预算与风险提示</p>
+        <div class="loading-skeleton">
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line short"></div>
+        </div>
+      </div>`;
+  }
+
   $('#btn-generate-plan').addEventListener('click', async () => {
     const p = getCurrentProject();
     if (!p) return;
+    // 先展示 loading，等 LLM 完成后一次性渲染（失败则降级为本地模板）
+    showPlanLoading();
     const plan = NorthstarPlan.generate(p);
     p.planHistory = [plan];
     p.planIndex = 0;
     saveProjects();
-    renderCurrentPlan(p);
-    $('#plan-output').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-    // 异步 LLM 增强：定制化玩法 + 诊断 + 执行计划 + 预算分配（失败/未配置则自动降级为 mock 玩法池）
     if (API_BASE) {
       const llm = await NorthstarPlan.generateWithLLM(p, API_BASE);
       if (llm) {
@@ -537,11 +552,25 @@
           };
         }
 
-        p.planHistory = [plan];
-        saveProjects();
-        renderCurrentPlan(p);
+        // 权益规则：LLM 定制化产出
+        if (llm.benefitRules && Array.isArray(llm.benefitRules) && llm.benefitRules.length) {
+          plan.benefitRules = llm.benefitRules.map((r) => ({ label: r.label || '权益', rule: r.rule || '', limit: !!r.limit }));
+        }
+        // 权益校验：LLM 定制化产出（防资损/羊毛）
+        if (llm.benefitValidation && Array.isArray(llm.benefitValidation) && llm.benefitValidation.length) {
+          plan.benefitValidation = llm.benefitValidation.map((v) => ({ level: v.level || 'low', msg: v.msg || '' }));
+        }
+        // 风险提示：LLM 定制化产出（项目整体风险）
+        if (llm.risks && Array.isArray(llm.risks) && llm.risks.length) {
+          plan.risks = llm.risks.map((r) => ({ level: r.level || 'low', content: r.content || '' }));
+        }
       }
     }
+
+    p.planHistory = [plan];
+    saveProjects();
+    renderCurrentPlan(p);
+    $('#plan-output').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
   $('#btn-tune-submit').addEventListener('click', () => {

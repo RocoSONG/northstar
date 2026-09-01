@@ -582,7 +582,7 @@
     L.push('');
 
     L.push('## 权益规则');
-    plan.benefitRules.forEach((r) => L.push(`- ${r.label}（${r.limit ? '限量' : '未设上限'}${r.stackable ? ' · 可叠加' : ''}）`));
+    plan.benefitRules.forEach((r) => L.push(`- ${r.label}${r.limit ? '（限量）' : ''}：${r.rule || ''}`));
     L.push('');
 
     L.push('## 执行计划');
@@ -625,9 +625,11 @@
 
     const benefitHtml = plan.benefitRules.map((r) => `
       <div class="coupon-row">
-        <span class="coupon-label">${esc(r.label)}</span>
-        ${r.limit ? '<span class="tag">限量</span>' : '<span class="tag tag-muted">未设上限</span>'}
-        ${r.stackable ? '<span class="tag">可叠加</span>' : '<span class="tag tag-muted">不可叠加</span>'}
+        <div class="coupon-head">
+          <span class="coupon-label">${esc(r.label)}</span>
+          ${r.limit ? '<span class="tag">限量</span>' : '<span class="tag tag-muted">未设上限</span>'}
+        </div>
+        ${r.rule ? `<span class="coupon-rule">${esc(r.rule)}</span>` : ''}
       </div>`).join('');
 
     const validationHtml = plan.benefitValidation.length

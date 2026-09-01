@@ -891,16 +891,19 @@ body {
 
 .coupon-row {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-2);
   margin-bottom: 8px;
 }
 .coupon-row:last-child { margin-bottom: 0; }
+.coupon-head { display: flex; align-items: center; gap: 10px; }
 .coupon-label { font-weight: 600; color: var(--text); }
+.coupon-rule { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
 .tag-muted { color: var(--text-faint); }
 
 .phase-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
@@ -1792,4 +1795,57 @@ body {
   .attr-share { display: none; }
   .exp-row { grid-template-columns: 1fr 1fr; }
   .llm-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   AI 分析中 loading
+   ============================================================ */
+.plan-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 64px 24px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.loading-orb {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--brand-grad);
+  color: #fff;
+  font-size: 20px;
+  animation: orbPulse 1.6s ease-in-out infinite;
+}
+@keyframes orbPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(109, 141, 255, 0.42); }
+  50% { transform: scale(1.08); box-shadow: 0 0 0 14px rgba(109, 141, 255, 0); }
+}
+.loading-title { font-size: 15px; font-weight: 650; color: var(--text); }
+.loading-sub { font-size: 12.5px; color: var(--text-muted); }
+.loading-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin-top: 14px;
+}
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--surface-3) 25%, var(--border-strong) 50%, var(--surface-3) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+.skeleton-line.short { width: 62%; }
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
