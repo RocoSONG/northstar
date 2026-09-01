@@ -64,6 +64,7 @@
     <nav class="topbar-nav" aria-label="主导航">
       <a href="#" class="nav-link is-active" data-nav="projects">项目</a>
       <a href="#" class="nav-link" data-nav="new">新建</a>
+      <a href="#" class="nav-link" data-nav="insight">数据洞察</a>
     </nav>
     <div class="topbar-actions">
       <button class="theme-toggle" id="theme-toggle" aria-label="切换主题">
@@ -289,12 +290,7 @@
       </div>
     </div>
 
-    <div class="tabs" role="tablist">
-      <button class="tab is-active" role="tab" data-tab="plan">① 活动策划</button>
-      <button class="tab" role="tab" data-tab="review">② 活动复盘</button>
-    </div>
-
-    <div class="tab-panel is-active" data-panel="plan">
+    <div class="plan-body">
       <div class="plan-toolbar">
         <div class="plan-summary" id="plan-summary"></div>
         <div class="plan-toolbar-actions">
@@ -325,58 +321,75 @@
         </div>
       </div>
     </div>
-    <div class="tab-panel" data-panel="review">
-      <div class="review-toolbar">
-        <div class="review-status">
-          <span class="status-dot" id="review-status-dot"></span>
-          <span id="review-status-text">数据未接入</span>
+  </section>
+
+  <!-- 视图 4：数据洞察 -->
+  <section class="view hidden" id="view-insight">
+    <div class="view-head">
+      <div>
+        <p class="eyebrow">数据洞察</p>
+        <h1 class="view-title">数据分析与复盘</h1>
+        <p class="view-sub">上传企业系统导出的数据表，一键生成有理有据、可视化的分析报告</p>
+      </div>
+    </div>
+
+    <!-- 步骤 1：上传 -->
+    <div id="insight-upload">
+      <div class="insight-dropzone" id="insight-dropzone">
+        <div class="dz-icon" aria-hidden="true">📊</div>
+        <p class="dz-title">拖拽文件到此处，或点击上传</p>
+        <p class="dz-sub">支持 CSV / Excel（.xlsx / .xls）</p>
+        <input type="file" id="insight-file" accept=".csv,.xlsx,.xls" class="hidden">
+      </div>
+      <div class="insight-col-grid">
+        <div class="insight-paste">
+          <p class="dz-title">或直接粘贴表格数据</p>
+          <p class="dz-sub">首行为表头，列用逗号或 Tab 分隔</p>
+          <textarea id="insight-paste" rows="6" aria-label="粘贴表格数据" placeholder="日期,渠道,新增用户,付费用户&#10;2025-01-01,抖音,1200,180&#10;2025-01-01,微信,900,140"></textarea>
+          <button class="btn btn-primary" id="btn-insight-paste" type="button">解析粘贴数据 →</button>
         </div>
-        <div class="review-actions">
-          <button class="btn btn-ghost btn-sm" id="btn-import-csv" type="button" title="即将上线">导入数据</button>
-          <button class="btn btn-primary" id="btn-start-stream" type="button"><span aria-hidden="true">▶</span> 启动实时追踪</button>
+        <div class="insight-sample">
+          <p class="dz-title">还没有数据？</p>
+          <button class="btn btn-ghost" id="btn-insight-sample" type="button">加载示例数据体验</button>
         </div>
       </div>
-      <div class="placeholder" id="review-empty">
-        <span class="empty-mark" aria-hidden="true">✦</span>
-        <p class="empty-title">尚未生成方案</p>
-        <p class="empty-sub">先在「活动策划」中生成方案，再回到这里启动实时数据追踪。</p>
+    </div>
+
+    <!-- 步骤 2：字段映射 -->
+    <div class="insight-mapping hidden" id="insight-mapping">
+      <div class="insight-stage-head">
+        <h2 class="insight-stage-title">确认字段映射</h2>
+        <p class="insight-stage-sub">AI 已自动识别每列的类型与角色，请确认后生成报告</p>
       </div>
-      <div id="review-output" class="hidden">
-        <div id="review-dashboard"></div>
-        <section class="plan-block">
-          <h3 class="plan-block-title"><span class="plan-num">⚠</span> 异常预警</h3>
-          <div class="plan-block-body" id="review-alerts"></div>
-        </section>
-        <section class="plan-block">
-          <h3 class="plan-block-title"><span class="plan-num">↺</span> AI 复盘报告</h3>
-          <div class="plan-block-body" id="review-report"></div>
-        </section>
-        <section class="plan-block">
-          <h3 class="plan-block-title"><span class="plan-num">🧪</span> 增长实验（A/B 测试）</h3>
-          <div class="plan-block-body">
-            <div class="ab-setup">
-              <select id="ab-hypothesis">
-                <option value="" disabled selected>选择要验证的策略假设</option>
-                <option value="benefit">加大权益力度 → 提升转化率</option>
-                <option value="audience">优化人群定向 → 降低获客成本</option>
-                <option value="referral">增加裂变激励 → 提升 K 因子</option>
-                <option value="channel">调整渠道配比 → 提升 ROI</option>
-              </select>
-              <button class="btn btn-primary btn-sm" id="btn-ab-run" type="button">发起实验</button>
-            </div>
-            <div id="ab-result"></div>
-          </div>
-        </section>
+      <div class="insight-mapping-table" id="insight-mapping-table"></div>
+      <div class="insight-stage-actions">
+        <button class="btn btn-ghost" id="btn-insight-back" type="button">← 重新上传</button>
+        <button class="btn btn-primary" id="btn-insight-generate" type="button">✦ 生成分析报告</button>
       </div>
+    </div>
+
+    <!-- 步骤 3：报告 -->
+    <div class="insight-report hidden" id="insight-report">
+      <div class="insight-report-head">
+        <div>
+          <h2 class="insight-report-title" id="insight-report-title">分析报告</h2>
+          <p class="insight-report-meta" id="insight-report-meta"></p>
+        </div>
+        <div class="insight-report-actions">
+          <button class="btn btn-ghost" id="btn-insight-reset" type="button">← 重新上传</button>
+          <button class="btn btn-primary" id="btn-insight-export" type="button">导出报告 ▾</button>
+        </div>
+      </div>
+      <div id="insight-report-body"></div>
     </div>
   </section>
 
 </main>
 
-<input type="file" id="csv-input" accept=".csv" class="hidden">
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <script src="plan.js"></script>
-<script src="review.js"></script>
+<script src="insight.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

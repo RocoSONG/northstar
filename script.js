@@ -41,7 +41,8 @@
   const views = {
     projects: $('#view-projects'),
     new: $('#view-new'),
-    detail: $('#view-detail')
+    detail: $('#view-detail'),
+    insight: $('#view-insight')
   };
   const navLinks = $$('.nav-link');
   const projectGrid = $('#project-grid');
@@ -202,7 +203,6 @@
     badge.className = `status-badge ${STATUS_CLASS[p.status] || ''}`;
     renderPlanSummary(p);
     renderPlan(p);
-    resetReview();
     showView('detail');
   }
 
@@ -392,6 +392,7 @@
     e.preventDefault();
     if (l.dataset.nav === 'projects') showView('projects');
     else if (l.dataset.nav === 'new') goNew();
+    else if (l.dataset.nav === 'insight') showView('insight');
   }));
 
   form.addEventListener('submit', (e) => {
@@ -446,22 +447,6 @@
       renderKPIs();
       openProject(project.id);
     }
-  });
-
-  /* ============================================================
-     详情：Tab 切换
-     ============================================================ */
-  $$('.tab').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      $$('.tab').forEach((t) => t.classList.toggle('is-active', t === tab));
-      $$('.tab-panel').forEach((panel) =>
-        panel.classList.toggle('is-active', panel.dataset.panel === tab.dataset.tab)
-      );
-      if (tab.dataset.tab === 'review') {
-        const p = getCurrentProject();
-        if (p && !reviewDash) initReview(p); // 冷启动预填充（不启动数据流）
-      }
-    });
   });
 
   /* ============================================================
@@ -617,100 +602,117 @@
   });
 
   /* ============================================================
-     复盘模块：数据看板 + 预警 + 复盘
+     数据洞察：上传 → 映射 → 生成报告
      ============================================================ */
-  let reviewTimer = null;
-  let reviewDash = null;
+  let insightData = null;   // { headers, rows, columns:[{name,type,role}] }
+  let insightReport = null; // 生成的报告数据
 
-  function renderReview() {
-    if (!reviewDash) return;
-    $('#review-dashboard').innerHTML = NorthstarReview.renderDashboard(reviewDash);
-    $('#review-alerts').innerHTML = NorthstarReview.renderAlerts(reviewDash);
-    $('#review-report').innerHTML = NorthstarReview.renderReport(reviewDash);
+  function resetInsight() {
+    insightData = null;
+    insightReport = null;
+    $('#insight-upload').classList.remove('hidden');
+    $('#insight-mapping').classList.add('hidden');
+    $('#insight-report').classList.add('hidden');
+    $('#insight-paste').value = '';
   }
 
-  function initReview(p) {
-    const plan = p.planHistory ? p.planHistory[p.planIndex] : null;
-    if (!plan || !plan.metricSchema || !plan.metricSchema.metrics.length) {
-      $('#review-empty').classList.remove('hidden');
-      $('#review-output').classList.add('hidden');
-      return false;
-    }
-    reviewDash = NorthstarReview.buildDashboard(plan);
-    renderReview();
-    $('#review-empty').classList.add('hidden');
-    $('#review-output').classList.remove('hidden');
-    return true;
-  }
-
-  function resetReview() {
-    if (reviewTimer) { clearInterval(reviewTimer); reviewTimer = null; }
-    reviewDash = null;
-    $('#review-empty').classList.remove('hidden');
-    $('#review-output').classList.add('hidden');
-    $('#review-status-text').textContent = '数据未接入';
-    $('#review-status-dot').classList.remove('is-live');
-    $('#btn-start-stream').innerHTML = '<span aria-hidden="true">▶</span> 启动实时追踪';
-  }
-
-  $('#btn-start-stream').addEventListener('click', () => {
-    const p = getCurrentProject();
-    if (!p) return;
-    if (reviewTimer) {
-      // 暂停
-      clearInterval(reviewTimer);
-      reviewTimer = null;
-      $('#review-status-text').textContent = '已暂停';
-      $('#review-status-dot').classList.remove('is-live');
-      $('#btn-start-stream').innerHTML = '<span aria-hidden="true">▶</span> 继续追踪';
-      return;
-    }
-    // 启动 / 继续
-    if (!reviewDash) {
-      const ok = initReview(p);
-      if (!ok) return;
-    }
-    $('#review-status-text').textContent = '实时追踪中（mock 数据流）';
-    $('#review-status-dot').classList.add('is-live');
-    $('#btn-start-stream').innerHTML = '<span aria-hidden="true">⏸</span> 暂停追踪';
-    reviewTimer = setInterval(() => {
-      reviewDash = NorthstarReview.tick(reviewDash);
-      renderReview();
-    }, 2000);
+  $('#insight-dropzone').addEventListener('click', () => $('#insight-file').click());
+  $('#insight-dropzone').addEventListener('dragover', (e) => { e.preventDefault(); $('#insight-dropzone').classList.add('is-drag'); });
+  $('#insight-dropzone').addEventListener('dragleave', () => $('#insight-dropzone').classList.remove('is-drag'));
+  $('#insight-dropzone').addEventListener('drop', (e) => {
+    e.preventDefault();
+    $('#insight-dropzone').classList.remove('is-drag');
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) handleInsightFile(file);
   });
 
-  // CSV 导入（字段映射）
-  $('#btn-import-csv').addEventListener('click', () => {
-    $('#csv-input').click();
-  });
-  $('#csv-input').addEventListener('change', (e) => {
+  $('#insight-file').addEventListener('change', (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const csvData = NorthstarReview.parseCSV(ev.target.result);
-      if (!csvData) { alert('CSV 解析失败，请检查格式（首行为表头）。'); return; }
-      const p = getCurrentProject();
-      if (!p) return;
-      if (!reviewDash) initReview(p);
-      const applied = NorthstarReview.applyCSV(reviewDash, csvData);
-      renderReview();
-      $('#review-status-text').textContent = `已导入数据（匹配 ${applied} 项指标）`;
-      $('#review-empty').classList.add('hidden');
-      $('#review-output').classList.remove('hidden');
-    };
-    reader.readAsText(file);
+    if (file) handleInsightFile(file);
     e.target.value = '';
   });
 
-  // 增长实验（A/B 测试）
-  $('#btn-ab-run').addEventListener('click', () => {
-    const id = $('#ab-hypothesis').value;
-    if (!id) { alert('请先选择要验证的策略假设。'); return; }
-    const exp = NorthstarReview.EXPERIMENTS.find((e) => e.id === id);
-    if (!exp) return;
-    const result = NorthstarReview.runExperiment(exp);
-    $('#ab-result').innerHTML = NorthstarReview.renderExperiment(result);
+  function handleInsightFile(file) {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (ext === 'csv' || ext === 'txt') {
+      const reader = new FileReader();
+      reader.onload = (ev) => loadInsightRaw(ev.target.result);
+      reader.readAsText(file);
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          loadInsightRaw(XLSX.utils.sheet_to_csv(ws));
+        } catch (err) { alert('Excel 解析失败：' + err.message); }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      alert('不支持的文件格式，请上传 CSV 或 Excel。');
+    }
+  }
+
+  $('#btn-insight-paste').addEventListener('click', () => loadInsightRaw($('#insight-paste').value));
+  $('#btn-insight-sample').addEventListener('click', () => loadInsightRaw(NorthstarInsight.SAMPLE));
+
+  function loadInsightRaw(text) {
+    const parsed = NorthstarInsight.parse(text);
+    if (!parsed) { alert('解析失败：请确保首行为表头，且至少有一行数据。'); return; }
+    insightData = parsed;
+    $('#insight-mapping-table').innerHTML = NorthstarInsight.renderMapping(parsed);
+    // 绑定角色选择
+    $$('#insight-mapping-table .map-role').forEach((sel) => {
+      sel.addEventListener('change', () => {
+        parsed.columns[Number(sel.dataset.col)].role = sel.value;
+      });
+    });
+    $('#insight-upload').classList.add('hidden');
+    $('#insight-mapping').classList.remove('hidden');
+    $('#insight-report').classList.add('hidden');
+  }
+
+  $('#btn-insight-back').addEventListener('click', resetInsight);
+  $('#btn-insight-reset').addEventListener('click', resetInsight);
+
+  $('#btn-insight-generate').addEventListener('click', () => {
+    if (!insightData) return;
+    insightReport = NorthstarInsight.generateReport(insightData);
+    renderInsightReport(insightReport);
+  });
+
+  function renderInsightReport(report) {
+    $('#insight-report-title').textContent = '数据洞察报告';
+    $('#insight-report-meta').textContent = report.metaText;
+    $('#insight-report-body').innerHTML = report.html;
+    $('#insight-mapping').classList.add('hidden');
+    $('#insight-report').classList.remove('hidden');
+    // 渲染图表
+    NorthstarInsight.renderCharts(report);
+    // 异步 LLM 洞察（分模块文本，失败则保留占位）
+    if (API_BASE) {
+      NorthstarInsight.generateInsights(insightData, API_BASE).then((blocks) => {
+        if (blocks) {
+          blocks.forEach((b) => {
+            const el = document.getElementById('insight-llm-' + b.id);
+            if (el) el.innerHTML = b.html;
+          });
+        }
+      });
+    }
+    $('#insight-report-body').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  $('#btn-insight-export').addEventListener('click', () => {
+    if (!insightReport) return;
+    const md = NorthstarInsight.toMarkdown(insightReport);
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '数据洞察报告.md';
+    a.click();
+    URL.revokeObjectURL(url);
   });
 
   /* ---------- 工具 ---------- */
